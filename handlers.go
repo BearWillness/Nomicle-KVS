@@ -2,23 +2,28 @@ package main
 
 import (
     "encoding/json"
-    "fmt"
+    "errors"
     "io/ioutil"
     "net/http"
-    "errors"
 )
 
 var ErrNotFound = errors.New("key not found")
 
+func writeError(w http.ResponseWriter, errMsg string, status int) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(status)
+    json.NewEncoder(w).Encode(map[string]string{"error": errMsg})
+}
+
 func putHandler(kv *KeyValueStore, key string, w http.ResponseWriter, r *http.Request) {
     if key == "" {
-        http.Error(w, "Missing key", http.StatusBadRequest)
+        writeError(w, "Missing key", http.StatusBadRequest)
         return
     }
 
     body, err := ioutil.ReadAll(r.Body)
     if err != nil {
-        http.Error(w, "Invalid body", http.StatusBadRequest)
+        writeError(w, "Invalid body", http.StatusBadRequest)
         return
     }
 
@@ -29,13 +34,16 @@ func putHandler(kv *KeyValueStore, key string, w http.ResponseWriter, r *http.Re
 
 func getHandler(kv *KeyValueStore, key string, w http.ResponseWriter, r *http.Request) {
     if key == "" {
-        http.Error(w, "Missing key", http.StatusBadRequest)
+        writeError(w, "Missing key", http.StatusBadRequest)
         return
     }
 
-    value, ok := kv.Get(key)
-    if !ok {
-        http.Error(w, "Not found", http.StatusNotFound)
+    value, err := kv.Get(key)
+    if errors.Is(err, ErrNotFound) {
+        writeError(w, "Not found", http.StatusNotFound)
+        return
+    } else if err != nil {
+        writeError(w, "Internal Server Error", http.StatusInternalServerError)
         return
     }
 
@@ -45,17 +53,19 @@ func getHandler(kv *KeyValueStore, key string, w http.ResponseWriter, r *http.Re
 
 func deleteHandler(kv *KeyValueStore, key string, w http.ResponseWriter, r *http.Request) {
     if key == "" {
-        http.Error(w, "Missing key", http.StatusBadRequest)
+        writeError(w, "Missing key", http.StatusBadRequest)
         return
     }
 
-    _, ok := kv.Get(key)
-    if !ok {
-        http.Error(w, "Not found", http.StatusNotFound)
+    err := kv.Delete(key)
+    if errors.Is(err, ErrNotFound) {
+        writeError(w, "Not found", http.StatusNotFound)
+        return
+    } else if err != nil {
+        writeError(w, "Internal Server Error", http.StatusInternalServerError)
         return
     }
 
-    kv.Delete(key)
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"status": "deleted", "key": key})
 }

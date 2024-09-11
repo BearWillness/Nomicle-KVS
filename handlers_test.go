@@ -3,6 +3,7 @@ package main
 import (
     "net/http"
     "net/http/httptest"
+    "strconv"
     "strings"
     "testing"
 )
@@ -64,4 +65,29 @@ func TestListKeysHandler(t *testing.T) {
     if resp.StatusCode != http.StatusOK {
         t.Fatalf("expected 200, got %d", resp.StatusCode)
     }
+}
+
+func TestParallelism(t *testing.T) {
+    kv := &KeyValueStore{}
+
+    t.Run("Parallel", func(t *testing.T) {
+        for i := 0; i < 100; i++ {
+            go func(i int) {
+                kv.Put("key", "value")
+                kv.Get("key")
+                kv.Delete("key")
+            }(i)
+        }
+    })
+
+    t.Run("Parallel with different keys", func(t *testing.T) {
+        for i := 0; i < 100; i++ {
+            go func(i int) {
+                key := "key" + strconv.Itoa(i)
+                kv.Put(key, "value")
+                kv.Get(key)
+                kv.Delete(key)
+            }(i)
+        }
+    })
 }

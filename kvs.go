@@ -1,6 +1,8 @@
 package main
 
-import "sync"
+import (
+    "sync"
+)
 
 type KeyValueStore struct {
     store sync.Map
@@ -10,16 +12,21 @@ func (kv *KeyValueStore) Put(key string, value string) {
     kv.store.Store(key, value)
 }
 
-func (kv *KeyValueStore) Get(key string) (string, bool) {
+func (kv *KeyValueStore) Get(key string) (string, error) {
     value, ok := kv.store.Load(key)
     if ok {
-        return value.(string), true
+        return value.(string), nil
     }
-    return "", false
+    return "", ErrNotFound
 }
 
-func (kv *KeyValueStore) Delete(key string) {
+func (kv *KeyValueStore) Delete(key string) error {
+    _, ok := kv.store.Load(key)
+    if !ok {
+        return ErrNotFound
+    }
     kv.store.Delete(key)
+    return nil
 }
 
 func (kv *KeyValueStore) ListKeys() []string {

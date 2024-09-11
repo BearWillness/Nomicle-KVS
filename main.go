@@ -3,6 +3,7 @@ package main
 import (
     "log"
     "net/http"
+    "strings"
     "time"
 )
 
@@ -21,29 +22,29 @@ func main() {
     mux := http.NewServeMux()
 
     mux.HandleFunc("/put/", func(w http.ResponseWriter, r *http.Request) {
-        key := r.URL.Path[len("/put/"):]
+        key := strings.TrimPrefix(r.URL.Path, "/put/")
         if r.Method == "PUT" {
             putHandler(kvStore, key, w, r)
         } else {
-            http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+            writeError(w, "Invalid method", http.StatusMethodNotAllowed)
         }
     })
 
     mux.HandleFunc("/get/", func(w http.ResponseWriter, r *http.Request) {
-        key := r.URL.Path[len("/get/"):]
+        key := strings.TrimPrefix(r.URL.Path, "/get/")
         if r.Method == "GET" {
             getHandler(kvStore, key, w, r)
         } else {
-            http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+            writeError(w, "Invalid method", http.StatusMethodNotAllowed)
         }
     })
 
     mux.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
-        key := r.URL.Path[len("/delete/"):]
+        key := strings.TrimPrefix(r.URL.Path, "/delete/")
         if r.Method == "DELETE" {
             deleteHandler(kvStore, key, w, r)
         } else {
-            http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+            writeError(w, "Invalid method", http.StatusMethodNotAllowed)
         }
     })
 
@@ -51,7 +52,7 @@ func main() {
         if r.Method == "GET" {
             listKeysHandler(kvStore, w, r)
         } else {
-            http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+            writeError(w, "Invalid method", http.StatusMethodNotAllowed)
         }
     })
 
